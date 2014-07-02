@@ -1,23 +1,43 @@
 import numpy as np
 
-N = 8
-p = 0.5
+class lattice(object):
+	def __init__(self, N=16, p=0.5):
+		self.N = N
+		self.clusters = []
+		self.numclusters = 0
+		self.p = p
+		self.percolators = []
+		self.sizes = []
 
-bonds = np.zeros((N, N))
-clusters = np.zeros((N, N), int)
+	def generate(self):
+		N = self.N
+		self.clusters = np.zeros((N, N), int)
+		clustercount = int(0)
+		right = np.random.rand(N, N) < self.p
+		down = np.random.rand(N, N) < self.p
 
-right = np.random.rand(N, N) < p
-down = np.random.rand(N, N) < p
+		for index, thiscluster in np.ndenumerate(self.clusters):
+			if thiscluster == 0:
+				clustercount += 1
+				thiscluster = clustercount
+				self.clusters[index] = thiscluster
+			if index[0] < N - 1 and down[index]:
+				self.clusters[index[0] + 1, index[1]] = thiscluster
+			if index[1] < N - 1 and right[index]:
+				self.clusters[index[0], index[1] + 1] = thiscluster
+		self.numclusters = clustercount
+		self.analyze()
 
-clustercount = int(0)
 
-for index, thiscluster in np.ndenumerate(clusters):
-	if thiscluster == 0:
-		clustercount += 1
-		thiscluster = clustercount
-		clusters[index] = thiscluster
-	if index[0] < N - 1 and down[index]:
-			clusters[index[0] + 1, index[1]] = thiscluster
-	if index[1] < N - 1 and right[index]:
-		clusters[index[0], index[1] + 1] = thiscluster
-
+	def analyze(self):
+		self.sizes, null = np.histogram(self.clusters, 
+										bins=range(self.numclusters))
+		north = self.clusters[0, :]
+		south = self.clusters[self.N - 1, :]
+		west = self.clusters[:, 0]
+		east = self.clusters[:, self.N - 1]
+		self.percolators = []
+		for cluster in range(self.numclusters):
+			if ((cluster in north and cluster in south)
+				or (cluster in west and cluster in east)):
+				self.percolators.append(cluster)
