@@ -1,5 +1,26 @@
 import numpy as np
 
+def test():
+	pList = np.arange(50) / 50.0
+	N = 16
+	trials = 1000
+
+	a = lattice(16)
+
+	results = []
+
+	for p in pList:
+		a.p = p
+		percolating = 0
+		for t in range(trials):
+			a.generate()
+			a.analyze()
+			if len(a.percolators) > 0: percolating += 1
+		results.append(percolating)
+
+	return (pList, results)
+
+
 class lattice(object):
 	def __init__(self, N=16, p=0.5):
 		self.N = N
