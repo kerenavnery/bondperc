@@ -1,42 +1,50 @@
 import numpy as np
-from matplotlib.pylab import subplots,close
+from matplotlib.pyplot import subplots,close
 from matplotlib import cm
 import matplotlib
 import threading
 
-def worker(imagedata, stopevent):
-    cmap = []
-    ncolours = 32
-    for n in range(ncolours):
-        cmap.append(tuple((np.random.rand(3)*256).astype(int)))
-    (rows, cols) = imagedata.shape
-    bitmap = np.zeros((rows, cols, 3))
-
-    fig,ax = subplots(1,1)
-    fig.show()
-    img = ax.imshow(imagedata)
-    img.set_interpolation('nearest')
-    fig.show()
-    fig.canvas.draw()
-
-    while (not stopevent.is_set()):
-        for index, value in np.ndenumerate(imagedata):
-            bitmap[index[0],index[1],:] = cmap[value % ncolours]
-        img.set_data(bitmap)
-        fig.canvas.draw()
-    close(fig)
-    return
-        
-
 def test():
-    pList = np.arange(50) / 50.0
+    def worker():
+        cmap = []
+        ncolours = 128
+        for n in range(ncolours):
+            cmap.append(tuple((np.random.rand(3)*256).astype(int)))
+        (rows, cols) = imagedata.shape
+        bitmap = np.zeros((rows, cols, 3))
+
+        fig,ax = subplots(1,1)
+        fig.show()
+        img = ax.imshow(imagedata)
+        img.set_interpolation('nearest')
+        fig.show()
+        fig.canvas.draw()
+
+        while (not stopdrawthread.is_set()):
+            if newimagedataevent.wait(1.0):
+                with imagedatalock:
+                 for index, value in np.ndenumerate(imagedata):
+                  bitmap[index[0],index[1],:] = cmap[value % ncolours]
+                img.set_data(bitmap)
+                fig.canvas.draw()
+                newimagedataevent.clear()
+        close(fig)
+        return
+
+
+    pList = np.arange(10,40) / 50.0
     N = 32
-    trials = 100
+    trials = 10
+
+    imagedatalock = threading.Lock()
+    newimagedataevent = threading.Event()
+    stopdrawthread = threading.Event()
 
     a = lattice(N)
     a.generate()
-    draw_stop = threading.Event()
-    drawthread = threading.Thread(target=worker, args=(a.clusters,draw_stop))
+    imagedata = np.empty_like(a.clusters)
+    drawthread_stop = threading.Event()
+    drawthread = threading.Thread(target=worker, args=())
     drawthread.start()
 
     results = []
@@ -47,10 +55,17 @@ def test():
         for t in range(trials):
             a.generate()
             a.analyze()
+
+            if imagedatalock.acquire(False):
+                imagedata[:] = a.clusters
+                imagedatalock.release()
+                newimagedataevent.set()
+
             if len(a.percolators) > 0: percolating += 1
         results.append(percolating)
 
-    draw_stop.set()
+    drawthread_stop.set()
+    print "joining other threads"
     drawthread.join()
     return (pList, results)
 
