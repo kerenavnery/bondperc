@@ -1,13 +1,12 @@
 import numpy as np
 from matplotlib.pyplot import subplots,close
-from matplotlib import cm
+from matplotlib import cm, animation, pyplot
 import matplotlib
 import threading
-import time
 
 def test():
     pList = np.arange(0.4,0.6,0.02)
-    N = 48
+    N = 32
     trials = 100
 
     imagedatalock = threading.Lock()
@@ -20,10 +19,7 @@ def test():
     times = []
 
     def worker():
-        timage = 0
-        tstart = time.clock()
         for p in pList:
-            pstart = time.clock()
             a.p = p
             percolating = 0
             for t in range(trials):
@@ -31,17 +27,13 @@ def test():
                 a.analyze()
 
                 if imagedatalock.acquire(False):
-                    tenter = time.clock()
                     imagedata[:] = a.clusters
                     imagedatalock.release()
                     newimagedataevent.set()
-                    timage += time.clock() - tenter
 
                 if len(a.percolators) > 0: percolating += 1
             results.append(percolating)
-            times.append(time.clock() - pstart)
-        print time.clock() - tstart, " s total; ", timage, " s for display."
-        return results, times
+        return results
 
     cmap = []
     ncolours = 32
@@ -50,7 +42,6 @@ def test():
     (rows, cols) = imagedata.shape
     bitmap = np.zeros((rows, cols, 3))
     fig,ax = subplots(1,1)
-    fig.show()
     img = ax.imshow(imagedata)
     img.set_interpolation('nearest')
     fig.canvas.draw()
@@ -58,14 +49,19 @@ def test():
     workerthread = threading.Thread(target=worker)
     workerthread.start()
 
-    while workerthread.is_alive():
+    def figupdate(*args):
         if newimagedataevent.wait(1.0):
             with imagedatalock:
-             for index, value in np.ndenumerate(imagedata):
-              bitmap[index[0],index[1],:] = cmap[value % ncolours]
-            img.set_data(bitmap)
-            fig.canvas.draw()
-            newimagedataevent.clear()
+                for index, value in np.ndenumerate(imagedata):
+                    bitmap[index[0],index[1],:] = cmap[value % ncolours]
+                img.set_array(bitmap)
+        return img
+
+    ani = animation.FuncAnimation(fig, figupdate)
+    fig.show()   
+
+    while workerthread.is_alive():
+        fig.canvas.flush_events()
 
     workerthread.join()
     return (pList, results, times)
