@@ -4,11 +4,7 @@ from matplotlib import cm, animation, pyplot
 import matplotlib
 import threading
 
-def test():
-    pList = np.arange(0.4,0.6,0.02)
-    N = 32
-    trials = 100
-
+def runtest(N=32, trials=100, p_list=np.arange(0.4,0.6,0.02)):
     imagedatalock = threading.Lock()
     newimagedataevent = threading.Event()
 
@@ -19,7 +15,7 @@ def test():
     times = []
 
     def worker():
-        for p in pList:
+        for p in p_list:
             a.p = p
             percolating = 0
             for t in range(trials):
@@ -64,7 +60,7 @@ def test():
         fig.canvas.flush_events()
 
     workerthread.join()
-    return (pList, results, times)
+    return results
 
 class lattice(object):
     def __init__(self, N=16, p=0.5):
