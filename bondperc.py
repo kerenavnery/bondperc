@@ -7,7 +7,7 @@ import time
 
 def test():
     pList = np.arange(0.4,0.6,0.02)
-    N = 64
+    N = 48
     trials = 100
 
     imagedatalock = threading.Lock()
@@ -17,11 +17,13 @@ def test():
     a.generate()
     imagedata = np.empty_like(a.clusters)
     results = []
+    times = []
 
     def worker():
         timage = 0
         tstart = time.clock()
         for p in pList:
+            pstart = time.clock()
             a.p = p
             percolating = 0
             for t in range(trials):
@@ -37,8 +39,9 @@ def test():
 
                 if len(a.percolators) > 0: percolating += 1
             results.append(percolating)
+            times.append(time.clock() - pstart)
         print time.clock() - tstart, " s total; ", timage, " s for display."
-        return results
+        return results, times
 
     cmap = []
     ncolours = 32
@@ -65,7 +68,7 @@ def test():
             newimagedataevent.clear()
 
     workerthread.join()
-    return (pList, results)
+    return (pList, results, times)
 
 class lattice(object):
     def __init__(self, N=16, p=0.5):
