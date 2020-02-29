@@ -5,17 +5,28 @@ Created on Sun Feb 23 22:43:26 2020
 @author: Keren
 """
 import numpy as np
+import matplotlib.pyplot as plt
 
-def test():
+def question1 ():
+    N = 1024
+    realizations = 100
+    p_steps = 0.05
+    p_array, trajectories_found = trajectory_per_p(N,realizations, p_steps)
+    
+    plt.plot(p_array, trajectories_found, 'bo', p_array, trajectories_found, 'b')
+    plt.title('P(trajectory) vs. p')
+    plt.xlabel('p - closed edge probability')
+    plt.ylabel('P - finding trajectory probability')
+    plt.show()
+
+def trajectory_per_p(N = 100, realizations = 50, p_steps = 0.5):
     #### Testing parameters ###
     # N^2 - number of sites in a square lattice. N is the number of sites in a row.
-    N = 160
     # realizations - for each N, p: calculate percolations this number of times
-    realizations = 50
     # Create an array of different "p" (bond probability)
+    print("Calculating for N = {}, realizations = {}, p_steps = {}.".format(N, realizations, p_steps))
     pmin = 0
     pmax = 1
-    p_steps = 0.5
     temp_ans = np.linspace(pmin, pmax,1+ ((pmax - pmin)/p_steps), endpoint=True, retstep=True)
     # Check that the required p_steps was generated
     if temp_ans[1] != p_steps:
@@ -24,10 +35,12 @@ def test():
 
     ### Initialize test ###
     lat = lattice(N)
-    results = []
+    trajectories_found = []
 
     ### Run  test ###
     for p in p_array:
+        print()
+        print("Calculating for p = {}".format(p))
         # Define a lattice with p bond probability
         lat.p = p
         number_of_percolating_realizations = 0
@@ -39,9 +52,10 @@ def test():
             # Count if this realization contain percolations
             if len(lat.percolators) > 0:
                 number_of_percolating_realizations += 1
-        results.append(number_of_percolating_realizations/realizations)
+        trajectories_found.append(number_of_percolating_realizations/realizations)
+        print("Found a trajectory in {} of the cases".format(number_of_percolating_realizations/realizations))
 
-    return (p_array, results)
+    return (p_array, trajectories_found)
 
 
 class lattice(object):
@@ -115,3 +129,4 @@ class lattice(object):
             if ((cluster in north and cluster in south)
                 or (cluster in west and cluster in east)):
                 self.percolators.append(cluster)
+                
