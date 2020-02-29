@@ -1,24 +1,47 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Feb 23 22:43:26 2020
+
+@author: Keren
+"""
 import numpy as np
 
 def test():
-    pList = np.arange(50) / 50.0
-    N = 16
-    trials = 1000
+    #### Testing parameters ###
+    # N^2 - number of sites in a square lattice. N is the number of sites in a row.
+    N = 160
+    # realizations - for each N, p: calculate percolations this number of times
+    realizations = 50
+    # Create an array of different "p" (bond probability)
+    pmin = 0
+    pmax = 1
+    p_steps = 0.5
+    temp_ans = np.linspace(pmin, pmax,1+ ((pmax - pmin)/p_steps), endpoint=True, retstep=True)
+    # Check that the required p_steps was generated
+    if temp_ans[1] != p_steps:
+        print("Oh no! Probability array was generated not as required. s_steps required is {}, s_steps recieved is {}".format(p_steps, temp_ans(1)))
+    p_array = temp_ans[0]
 
-    a = lattice(16)
-
+    ### Initialize test ###
+    lat = lattice(N)
     results = []
 
-    for p in pList:
-        a.p = p
-        percolating = 0
-        for t in range(trials):
-            a.generate()
-            a.analyze()
-            if len(a.percolators) > 0: percolating += 1
-        results.append(percolating)
+    ### Run  test ###
+    for p in p_array:
+        # Define a lattice with p bond probability
+        lat.p = p
+        number_of_percolating_realizations = 0
+        for t in range(realizations):
+            # Generate a random lattice
+            lat.generate()
+            # Find percolations for the given lattice
+            lat.analyze()
+            # Count if this realization contain percolations
+            if len(lat.percolators) > 0:
+                number_of_percolating_realizations += 1
+        results.append(number_of_percolating_realizations/realizations)
 
-    return (pList, results)
+    return (p_array, results)
 
 
 class lattice(object):
