@@ -23,7 +23,7 @@ The assignment is about bond percolation on 2D square lattice.
 - properties:
     - numclusters - Num of different clusters found on the lattice
     - clusters - 2d array for each site, with the cluster ID it is a part of
-    - percolators - array of cluster ID's that are percolating
+    - percolators - list of cluster ID's that are percolating
     - 
      
 

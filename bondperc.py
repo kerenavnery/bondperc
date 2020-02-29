@@ -6,9 +6,10 @@ Created on Sun Feb 23 22:43:26 2020
 """
 import numpy as np
 import matplotlib.pyplot as plt
+import networkx as nx
 
 def question1 ():
-    N = 100
+    N = 10
     realizations = 10
     p_steps = 0.05
     p_array, trajectories_found = trajectory_per_p(N,realizations, p_steps)
@@ -57,7 +58,26 @@ def trajectory_per_p(N = 100, realizations = 50, p_steps = 0.5):
 
     return (p_array, trajectories_found)
 
-
+def plot_lattice(N = 2):
+    G = nx.grid_2d_graph(N,N)
+    #We need this so that the lattice is drawn vertically to the horizon
+    pos = dict( (l,l) for l in G.nodes() )
+    print("pos = {}".format(pos))
+    print("G.nodes = {}".format(G.nodes))
+    nodes = [(0, 0), (0, 1), (1,0), (1, 1)]
+    print("nodes = {}".format(nodes))
+    print("G.edges = {}".format(G.edges))
+    edges = [ ((0, 0), (0, 1)), ((0, 1), (1, 1))]
+    print("edges = {}".format(edges))
+    
+    #Draw the lattice
+    #nx.draw_networkx_edges(G, pos = pos)
+    nx.draw_networkx(G, nodelist = nodes, pos = pos, with_labels = False, node_size = 0, edgelist = edges)
+    
+    #Plot it on the screen
+    plt.axis('off')
+    plt.show()
+    
 class lattice(object):
     def __init__(self, N=16, p=0.5):
         self.N = N
@@ -65,6 +85,8 @@ class lattice(object):
         self.numclusters = 0
         self.p = p
         self.percolators = []
+        self.rightbonds = np.zeros((N, N), int)
+        self.downbonds = np.zeros((N, N), int)
 
     def generate(self):
         N = self.N
@@ -77,6 +99,8 @@ class lattice(object):
         # Generate edges with probability p for a closed edge
         rightbonds = np.random.rand(N, N) < self.p
         downbonds = np.random.rand(N, N) < self.p
+        self.rightbonds = rightbonds
+        self.downbonds = downbonds
 
         # Loop over sites and check connectivity via edges to other sites
         # Start at the upper-left corner
@@ -107,20 +131,20 @@ class lattice(object):
                         clusters[clusters == clusterID] = existingcluster
                         uids.remove(clusterID)
                         clusterID = existingcluster
+                # There is a bond downwards
                 if row < N - 1 and downbonds[row, col]:
+                    ## percolate! connect the site downwards to the cluster above it.
                     self.clusters[down] = clusterID
 
         self.numclusters = len(uids)
 
 
     def analyze(self):
+        # Find which clusters are percolating from top to bottom
         north = self.clusters[0, :]
         south = self.clusters[self.N - 1, :]
-        west = self.clusters[:, 0]
-        east = self.clusters[:, self.N - 1]
         self.percolators = []
         for cluster in self.uids:
             if (cluster in north and cluster in south):
-                #or (cluster in west and cluster in east)):
                 self.percolators.append(cluster)
                 
