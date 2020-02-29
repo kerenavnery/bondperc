@@ -8,8 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def question1 ():
-    N = 1024
-    realizations = 100
+    N = 100
+    realizations = 10
     p_steps = 0.05
     p_array, trajectories_found = trajectory_per_p(N,realizations, p_steps)
     
@@ -65,7 +65,6 @@ class lattice(object):
         self.numclusters = 0
         self.p = p
         self.percolators = []
-        self.sizes = []
 
     def generate(self):
         N = self.N
@@ -74,25 +73,21 @@ class lattice(object):
         clusteruid = int(0)
         self.uids = []
         uids = self.uids
+        
+        # Generate edges with probability p for a closed edge
         rightbonds = np.random.rand(N, N) < self.p
         downbonds = np.random.rand(N, N) < self.p
 
-#        for index, thiscluster in np.ndenumerate(self.clusters):
-#            if thiscluster == 0:
-#                clustercount += 1
-#                thiscluster = clustercount
-#                self.clusters[index] = thiscluster
-#            if index[0] < N - 1 and down[index]:
-#                self.clusters[index[0] + 1, index[1]] = thiscluster
-#            if index[1] < N - 1 and right[index]:
-#                self.clusters[index[0], index[1] + 1] = thiscluster
-        
+        # Loop over sites and check connectivity via edges to other sites
+        # Start at the upper-left corner
         for row in range(N):
             for col in range(N):
+                # The bonds to the right and downwards
                 right = (row, col + 1)
                 down = (row + 1, col)
                 clusterID = clusters[row, col]
 
+                # Is this site connected to a previously defined cluster?
                 if clusterID == 0:
                     ## new cluster
                     clusteruid += 1
@@ -100,13 +95,15 @@ class lattice(object):
                     clusters[row,col] = clusterID
                     uids.append(clusterID)
 
+                # THere is a bond to the right
                 if col < N - 1 and rightbonds[row,col]:
+                    ## not an existing cluster to the right
                     if clusters[right] == 0:
-                        ## nothing to the right
                         clusters[right] = clusterID
+                    ## Found an existing cluster to the right
                     elif clusterID != clusters[right]:
-                        ## different cluster found to right
                         existingcluster = clusters[right]
+                        # relabel the connected clusters the same
                         clusters[clusters == clusterID] = existingcluster
                         uids.remove(clusterID)
                         clusterID = existingcluster
@@ -114,19 +111,16 @@ class lattice(object):
                     self.clusters[down] = clusterID
 
         self.numclusters = len(uids)
-        self.analyze()
 
 
     def analyze(self):
-        self.sizes, null = np.histogram(self.clusters, 
-                                        bins=range(self.numclusters))
         north = self.clusters[0, :]
         south = self.clusters[self.N - 1, :]
         west = self.clusters[:, 0]
         east = self.clusters[:, self.N - 1]
         self.percolators = []
         for cluster in self.uids:
-            if ((cluster in north and cluster in south)
-                or (cluster in west and cluster in east)):
+            if (cluster in north and cluster in south):
+                #or (cluster in west and cluster in east)):
                 self.percolators.append(cluster)
                 
