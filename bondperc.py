@@ -67,28 +67,6 @@ def trajectory_per_p(N = 100, realizations = 50, p_steps = 0.5):
 
     return (p_array, trajectories_found)
 
-def plot_lattice(lat):
-    N = lat.N
-    rightbonds = lat.rightbonds
-    downbonds = lat.downbonds
-    G = nx.grid_2d_graph(N,N)
-    #We need this so that the lattice is drawn vertically to the horizon
-    pos = dict( (l,l) for l in G.nodes() )
-    print("pos = {}".format(pos))
-    print("G.nodes = {}".format(G.nodes))
-    nodes = [(0, 0), (0, 1), (1,0), (1, 1)]
-    print("nodes = {}".format(nodes))
-    print("G.edges = {}".format(G.edges))
-    edges = [ ((0, 0), (0, 1)), ((0, 1), (1, 1))]
-    print("edges = {}".format(edges))
-    
-    #Draw the lattice
-    #nx.draw_networkx_edges(G, pos = pos)
-    nx.draw_networkx(G, nodelist = nodes, pos = pos, with_labels = False, node_size = 0, edgelist = edges)
-    
-    #Plot it on the screen
-    plt.axis('off')
-    plt.show()
     
 class lattice(object):
     def __init__(self, N=16, p=0.5):
@@ -99,6 +77,86 @@ class lattice(object):
         self.percolators = []
         self.rightbonds = np.zeros((N, N), int)
         self.downbonds = np.zeros((N, N), int)
+        
+    def double_decimate(self):
+        N = self.N
+        dec_lat = lattice(N/2, self.p)
+        
+        def is_node_on_lattice(node):
+            return ((node[0] >= 0) and (node[1] >= 0) and (node[0] < N) and (node[1] < N))
+        
+        def is_nn_bond(node1, node2):
+            if ((abs(node1[0] - node2[0]) + abs(node1[1] - node2[1])) != 1):
+                print("Error tried to find non nearest-neighbor bond")
+                return False
+            else:
+                # node2 is above node1
+                if (node1[0] - node2[0]) == 1:
+                    return self.downbonds[node2[0], node2[1]]
+                # node1 is above node2
+                if (node1[0] - node2[0]) == -1:
+                    return self.downbonds[node1[0], node1[1]]
+                # node2 is left of node1
+                if (node1[1] - node2[1]) == 1:
+                    return self.rightbonds[node2[0], node2[1]]
+                # node1 is left of node2
+                if (node1[1] - node2[1]) == -1:
+                    return self.rightbonds[node1[0], node1[1]]
+        
+        for row in range(0, self.N, 2):
+            for col in range(0, self.N, 2):
+                print("row = {} col = {}".format(row, col))
+                # Current node
+                node = (row, col) 
+                # Neighbor nodes
+                up      = (row, col - 1)
+                right   = (row + 1, col)
+                down    = (row, col + 1)
+                left    = (row - 1, col)
+
+                # Neighbors after a single decimation
+                upright      = (row + 1, col - 1)
+                downright    = (row + 1, col + 1)
+                downleft     = (row - 1, col + 1)
+                #upleft       = (row - 1, col - 1)
+                
+                # Neighbors after two decimations
+                #upup        = (row, col - 2)
+                rightright  = (row + 2, col)
+                downdown    = (row, col + 2)
+                #leftleft    = (row - 2, col)
+                
+                # Not neighbors but relevant
+                uprightright    = (row + 2, col - 1)
+                downrightright  = (row + 2, col + 1)
+                downdownright   = (row + 1, col + 2)
+                downdownleft    = (row - 1, col + 2)
+                
+                ## I am only interested in rightright and downdown
+                bond_node_rightright = False
+                if is_node_on_lattice(rightright):
+                    # Find if it is connected through one of the options
+                    if is_node_on_lattice(upright):
+                       bond_node_upright = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
+                       bond_upright_rightright = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
+                       bond_node_rightright = ( and ) or bond_node_rightright
+                    if is_node_on_lattice(downright):
+                       bond_node_downright = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
+                       bond_downright_rightright = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
+                       bond_node_rightright = ( and ) or bond_node_rightright
+            
+                bond_node_downdown= False
+                if is_node_on_lattice(downdown):
+                    # Find if it is connected through one of the options
+                    if is_node_on_lattice(downleft):
+                       bond_node_downleft = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
+                       bond_downleft_downdown= (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
+                       bond_node_downdown = ( and ) or bond_node_downdown
+                    if is_node_on_lattice(downright):
+                       bond_node_downright = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
+                       bond_downright_downdown = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
+                       bond_node_downdown = ( and ) or bond_node_downdown
+
     
     def plot(self):
         nodes = []
@@ -108,9 +166,10 @@ class lattice(object):
         for row in range(self.N):
             for col in range(self.N):
                 print("row = {} col = {}".format(row, col))
-                node = (col, row) 
-                right = (col + 1, row)
-                down = (col, row + 1)
+                # These are in the opposite format to make sure the graph is orianted correctl.
+                node = (col, row) # Is actually (row, col)
+                right = (col + 1, row) # Is actually (row, col +1)
+                down = (col, row + 1) # Is actually (row+1, col)
                 nodes.append(node)
                 # THere is a bond to the right
                 if col < self.N - 1 and self.rightbonds[row,col]:
