@@ -10,11 +10,19 @@ import networkx as nx
 
 def test ():
     lat = lattice(4)
-    lat.p = 0.5
-    lat.generate()
+    lat.p = 0.0
+    lat.randomize()
+    ###
+    lat.percolate()
     lat.plot()
     lat.analyze()
     print(len(lat.percolators))
+    dec_lat = lat.double_decimate()
+    ###
+    dec_lat.percolate()
+    dec_lat.plot()
+    dec_lat.analyze()
+    print(len(dec_lat.percolators))
     
     
 def question1 ():
@@ -56,7 +64,8 @@ def trajectory_per_p(N = 100, realizations = 50, p_steps = 0.5):
         number_of_percolating_realizations = 0
         for t in range(realizations):
             # Generate a random lattice
-            lat.generate()
+            lat.randomize()
+            lat.percolate()
             # Find percolations for the given lattice
             lat.analyze()
             # Count if this realization contain percolations
@@ -71,16 +80,26 @@ def trajectory_per_p(N = 100, realizations = 50, p_steps = 0.5):
 class lattice(object):
     def __init__(self, N=16, p=0.5):
         self.N = N
+        self.p = p
         self.clusters = np.zeros((N, N), int)
         self.numclusters = 0
-        self.p = p
         self.percolators = []
         self.rightbonds = np.zeros((N, N), int)
         self.downbonds = np.zeros((N, N), int)
         
+    def randomize(self):
+        # Generate edges with probability p for a closed edge
+        rightbonds = np.random.rand(N, N) < self.p
+        downbonds = np.random.rand(N, N) < self.p
+        self.rightbonds = rightbonds
+        self.downbonds = downbonds
+        
+        
     def double_decimate(self):
         N = self.N
-        dec_lat = lattice(N/2, self.p)
+        if N%2 != 0:
+            print("Can't divide {} by 2!".format(N))
+        dec_lat = lattice(int(N/2), self.p)
         
         def is_node_on_lattice(node):
             return ((node[0] >= 0) and (node[1] >= 0) and (node[0] < N) and (node[1] < N))
@@ -106,8 +125,10 @@ class lattice(object):
         for row in range(0, self.N, 2):
             for col in range(0, self.N, 2):
                 print("row = {} col = {}".format(row, col))
+                
                 # Current node
                 node = (row, col) 
+                
                 # Neighbor nodes
                 up      = (row, col - 1)
                 right   = (row + 1, col)
@@ -118,13 +139,10 @@ class lattice(object):
                 upright      = (row + 1, col - 1)
                 downright    = (row + 1, col + 1)
                 downleft     = (row - 1, col + 1)
-                #upleft       = (row - 1, col - 1)
                 
                 # Neighbors after two decimations
-                #upup        = (row, col - 2)
                 rightright  = (row + 2, col)
                 downdown    = (row, col + 2)
-                #leftleft    = (row - 2, col)
                 
                 # Not neighbors but relevant
                 uprightright    = (row + 2, col - 1)
@@ -132,31 +150,39 @@ class lattice(object):
                 downdownright   = (row + 1, col + 2)
                 downdownleft    = (row - 1, col + 2)
                 
+                ############################################
                 ## I am only interested in rightright and downdown
+                ####### rightright #############
                 bond_node_rightright = False
                 if is_node_on_lattice(rightright):
                     # Find if it is connected through one of the options
                     if is_node_on_lattice(upright):
-                       bond_node_upright = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
-                       bond_upright_rightright = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
-                       bond_node_rightright = ( and ) or bond_node_rightright
+                       bond_node_upright = (is_nn_bond(node, up) and is_nn_bond(up, upright)) or (is_nn_bond(node, right) and is_nn_bond(right, upright))  
+                       bond_upright_rightright = (is_nn_bond(upright, right) and is_nn_bond(right, rightright)) or (is_nn_bond(upright, uprightright) and is_nn_bond(uprightright, rightright))  
+                       bond_node_rightright = (bond_node_upright and bond_upright_rightright) or bond_node_rightright
                     if is_node_on_lattice(downright):
-                       bond_node_downright = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
-                       bond_downright_rightright = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
-                       bond_node_rightright = ( and ) or bond_node_rightright
-            
+                       bond_node_downright = (is_nn_bond(node, down) and is_nn_bond(down, downright)) or (is_nn_bond(node, right) and is_nn_bond(right, downright))  
+                       bond_downright_rightright = (is_nn_bond(downright, right) and is_nn_bond(right, rightright)) or (is_nn_bond(downright, downrightright) and is_nn_bond(downrightright, rightright))  
+                       bond_node_rightright = (bond_node_downright and bond_downright_rightright) or bond_node_rightright
+                    dec_lat.rightbonds[int(node[0]/2),int(node[1]/2)] = bond_node_rightright
+                ####### downdown #############    
                 bond_node_downdown= False
                 if is_node_on_lattice(downdown):
                     # Find if it is connected through one of the options
                     if is_node_on_lattice(downleft):
-                       bond_node_downleft = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
-                       bond_downleft_downdown= (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
-                       bond_node_downdown = ( and ) or bond_node_downdown
+                       bond_node_downleft = (is_nn_bond(node, down) and is_nn_bond(down, downleft)) or (is_nn_bond(node, left) and is_nn_bond(left, downleft))  
+                       bond_downleft_downdown= (is_nn_bond(downleft, downdownleft) and is_nn_bond(downdownleft, downdown)) or (is_nn_bond(downleft, down) and is_nn_bond(down, downdown))  
+                       bond_node_downdown = (bond_node_downleft and bond_downleft_downdown) or bond_node_downdown
                     if is_node_on_lattice(downright):
-                       bond_node_downright = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
-                       bond_downright_downdown = (is_nn_bond() and is_nn_bond()) or (is_nn_bond() and is_nn_bond())  
-                       bond_node_downdown = ( and ) or bond_node_downdown
-
+                       bond_node_downright = (is_nn_bond(node, down) and is_nn_bond(down,downright)) or (is_nn_bond(node, right) and is_nn_bond(right, downright))  
+                       bond_downright_downdown = (is_nn_bond(downright, down) and is_nn_bond(down, downdown)) or (is_nn_bond(downright, downdownright) and is_nn_bond(downdownright, downdown))  
+                       bond_node_downdown = (bond_node_downright and bond_downright_downdown) or bond_node_downdown
+                    dec_lat.downbonds[int(node[0]/2),int(node[1]/2)] = bond_node_downdown
+        
+        return dec_lat
+    
+    
+    
     
     def plot(self):
         nodes = []
@@ -165,7 +191,7 @@ class lattice(object):
         # Generate nodes, edges list for nx graphics
         for row in range(self.N):
             for col in range(self.N):
-                print("row = {} col = {}".format(row, col))
+                #print("row = {} col = {}".format(row, col))
                 # These are in the opposite format to make sure the graph is orianted correctl.
                 node = (col, row) # Is actually (row, col)
                 right = (col + 1, row) # Is actually (row, col +1)
@@ -182,11 +208,11 @@ class lattice(object):
         G = nx.grid_2d_graph(self.N,self.N)
         #We need this so that the lattice is drawn vertically to the horizon
         pos = dict( (l,l) for l in G.nodes() )
-        print("pos = {}".format(pos))
-        print("G.nodes = {}".format(G.nodes))
-        print("nodes = {}".format(nodes))
-        print("G.edges = {}".format(G.edges))
-        print("edges = {}".format(edges))
+#        print("pos = {}".format(pos))
+#        print("G.nodes = {}".format(G.nodes))
+#        print("nodes = {}".format(nodes))
+#        print("G.edges = {}".format(G.edges))
+#        print("edges = {}".format(edges))
         
         #Draw the lattice
         #nx.draw_networkx_edges(G, pos = pos)
@@ -196,19 +222,16 @@ class lattice(object):
         plt.axis('off')
         plt.show()
 
-    def generate(self):
+    def percolate(self):
         N = self.N
         self.clusters[:,:] = 0
         clusters = self.clusters
         clusteruid = int(0)
         self.uids = []
         uids = self.uids
-        
-        # Generate edges with probability p for a closed edge
-        rightbonds = np.random.rand(N, N) < self.p
-        downbonds = np.random.rand(N, N) < self.p
-        self.rightbonds = rightbonds
-        self.downbonds = downbonds
+
+        rightbonds = self.rightbonds
+        downbonds = self.downbonds
 
         # Loop over sites and check connectivity via edges to other sites
         # Start at the upper-left corner
