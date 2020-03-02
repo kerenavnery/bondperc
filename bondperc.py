@@ -8,6 +8,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 
+def test ():
+    lat = lattice(4)
+    lat.p = 0.5
+    lat.generate()
+    lat.plot()
+    lat.analyze()
+    print(len(lat.percolators))
+    
+    
 def question1 ():
     N = 10
     realizations = 10
@@ -58,7 +67,10 @@ def trajectory_per_p(N = 100, realizations = 50, p_steps = 0.5):
 
     return (p_array, trajectories_found)
 
-def plot_lattice(N = 2):
+def plot_lattice(lat):
+    N = lat.N
+    rightbonds = lat.rightbonds
+    downbonds = lat.downbonds
     G = nx.grid_2d_graph(N,N)
     #We need this so that the lattice is drawn vertically to the horizon
     pos = dict( (l,l) for l in G.nodes() )
@@ -87,6 +99,43 @@ class lattice(object):
         self.percolators = []
         self.rightbonds = np.zeros((N, N), int)
         self.downbonds = np.zeros((N, N), int)
+    
+    def plot(self):
+        nodes = []
+        edges = []
+        
+        # Generate nodes, edges list for nx graphics
+        for row in range(self.N):
+            for col in range(self.N):
+                print("row = {} col = {}".format(row, col))
+                node = (col, row) 
+                right = (col + 1, row)
+                down = (col, row + 1)
+                nodes.append(node)
+                # THere is a bond to the right
+                if col < self.N - 1 and self.rightbonds[row,col]:
+                    edges.append((node, right))
+                # There is a bond downwards
+                if row < self.N - 1 and self.downbonds[row, col]:
+                    edges.append((node, down))    
+                
+        
+        G = nx.grid_2d_graph(self.N,self.N)
+        #We need this so that the lattice is drawn vertically to the horizon
+        pos = dict( (l,l) for l in G.nodes() )
+        print("pos = {}".format(pos))
+        print("G.nodes = {}".format(G.nodes))
+        print("nodes = {}".format(nodes))
+        print("G.edges = {}".format(G.edges))
+        print("edges = {}".format(edges))
+        
+        #Draw the lattice
+        #nx.draw_networkx_edges(G, pos = pos)
+        nx.draw_networkx(G, nodelist = nodes, pos = pos, with_labels = False, node_size = 1, edgelist = edges)
+        
+        #Plot it on the screen
+        plt.axis('off')
+        plt.show()
 
     def generate(self):
         N = self.N
