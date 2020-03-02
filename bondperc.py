@@ -10,19 +10,19 @@ import networkx as nx
 
 def test ():
     lat = lattice(4)
-    lat.p = 0.0
+    lat.p = 1.0
     lat.randomize()
     ###
     lat.percolate()
     lat.plot()
     lat.analyze()
-    print(len(lat.percolators))
+    print("{} percolators found".format(len(lat.percolators)))
     dec_lat = lat.double_decimate()
     ###
     dec_lat.percolate()
     dec_lat.plot()
     dec_lat.analyze()
-    print(len(dec_lat.percolators))
+    print("{} percolators found".format(len(dec_lat.percolators)))
     
     
 def question1 ():
