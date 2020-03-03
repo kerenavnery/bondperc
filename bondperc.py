@@ -2,7 +2,7 @@
 """
 Created on Sun Feb 23 22:43:26 2020
 
-@author: Keren
+@author: Keren Avnery
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,15 +10,20 @@ import networkx as nx
 
 def question2(p = 0.5):
     realizations = 10
+    # Needs to be larger than number of decimations. 100 is more than enough because the lattice is less than 2^200 sites big.
     percolation_prob_list = [0]*100
     lat = lattice(128)
     lat.p = p
+    # Iterate over different realizations
     for t in range(realizations):    
+        #generate random lattice
         lat.randomize()
+        # Call the recursive function to decimate and return the percolation bool
         size_list, percolates_list = trajectory_per_decimation(lat)
+        # Record iteration results
         for i in range(len(percolates_list)):
             percolation_prob_list[i] = percolation_prob_list[i] + (percolates_list[i]/realizations)
-        
+    # Plotting
     plt.plot(size_list, percolation_prob_list[:len(size_list)], 'bo', size_list,percolation_prob_list[:len(size_list)], 'b')
     plt.xscale('log', basex = 2)
     plt.title('P(trajectory) vs. N\np = {}, realizations = 10'.format(lat.p))
@@ -36,7 +41,7 @@ def trajectory_per_decimation (lat):
     lat.analyze()
     # Find if it percolates
     curr_lattice_percolates = (len(lat.percolators) > 0)
-    # Register results
+    # Record results
     print("N = {}, percolates = {}".format((lat.N)**2, curr_lattice_percolates))
     size_list.append(lat.N**2)
     percolates_list.append(curr_lattice_percolates)
@@ -51,7 +56,7 @@ def trajectory_per_decimation (lat):
         # Recursive function call
         next_N_list, next_percolates_list = trajectory_per_decimation (dec_lat)
         #print("returned from recursion with {}, {}".format(next_N_list, next_percolates_list))
-        # Register results
+        # Record results
         for item in next_N_list:
             size_list.append(item)
         for item in next_percolates_list:    
@@ -60,11 +65,15 @@ def trajectory_per_decimation (lat):
 
     
 def question1 ():
+    # Question 1.1.1 parameters:
     N = 256
     realizations = 50
     p_steps = 0.05
+    
+    # Calculate trajectory per p
     p_array, trajectories_found = trajectory_per_p(N,realizations, p_steps)
     
+    # Plotting
     plt.plot(p_array, trajectories_found, 'bo', p_array, trajectories_found, 'b')
     plt.title('P(trajectory) vs. p')
     plt.xlabel('p - closed edge probability')
@@ -141,7 +150,6 @@ class lattice(object):
         clusteruid = int(0)
         self.uids = []
         uids = self.uids
-
         rightbonds = self.rightbonds
         downbonds = self.downbonds
 
@@ -215,14 +223,8 @@ class lattice(object):
         G = nx.grid_2d_graph(self.N,self.N)
         #We need this so that the lattice is drawn vertically to the horizon
         pos = dict( (l,l) for l in G.nodes() )
-#        print("pos = {}".format(pos))
-#        print("G.nodes = {}".format(G.nodes))
-#        print("nodes = {}".format(nodes))
-#        print("G.edges = {}".format(G.edges))
-#        print("edges = {}".format(edges))
-        
+       
         #Draw the lattice
-        #nx.draw_networkx_edges(G, pos = pos)
         nx.draw_networkx(G, nodelist = nodes, pos = pos, with_labels = False, node_size = 1, edgelist = edges)
         
         #Plot it on the screen
@@ -230,14 +232,21 @@ class lattice(object):
         plt.show()    
         
     def double_decimate(self):
+        #### About this function
+        # This function returns a lattice, 1/4 of the size of "self". The function performs two decimations
+        # As described in the excersise: 
+        # There is a bond between a site and a NNN (next-nearest-neighbor) iff there is a path from the site to a NN and from the NN to the NNN.
+        
         N = self.N
         if N%2 != 0:
             print("Can't divide {} by 2!".format(N))
         dec_lat = lattice(int(N/2), self.p)
         
+        # Helper function to find if the indexes are on the lattice
         def is_node_on_lattice(node):
             return ((node[0] >= 0) and (node[1] >= 0) and (node[0] < N) and (node[1] < N))
         
+        # Helper funtion to find if two nodes are NN (nearest neighbors) and share a bond
         def is_nn_bond(node1, node2):
             if ((abs(node1[0] - node2[0]) + abs(node1[1] - node2[1])) != 1):
                 print("Error tried to find non nearest-neighbor bond")
@@ -255,11 +264,9 @@ class lattice(object):
                 # node1 is left of node2
                 if (node1[1] - node2[1]) == -1:
                     return self.rightbonds[node1[0], node1[1]]
-        
+        # Iterate over all sites that should remain after double decmation
         for row in range(0, self.N + 1, 2): # Stop at self.N to include the last row and col
-            for col in range(0, self.N + 1, 2):
-                #print("row = {} col = {}".format(row, col))
-                
+            for col in range(0, self.N + 1, 2):                
                 # Current node
                 node = (row, col) 
                 
